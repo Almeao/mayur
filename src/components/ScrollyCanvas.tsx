@@ -26,16 +26,29 @@ export default function ScrollyCanvas({ heroRef }: Props) {
     let cancelled = false;
     let loadedCount = 0;
 
+    const getBasePath = () => {
+      if (typeof window !== 'undefined') {
+        const p = window.location.pathname;
+        if (p.startsWith('/mayur')) return '/mayur';
+      }
+      return process.env.NEXT_PUBLIC_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/mayur' : '');
+    };
+
+    const basePath = getBasePath();
+
     const promises = Array.from({ length: FRAME_COUNT }, (_, i) => {
       return new Promise<HTMLImageElement>((resolve) => {
         const img = new Image();
         const padded = (i + 1).toString().padStart(3, '0');
-        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/mayur' : '');
         img.src = `${basePath}/sequence/ezgif-frame-${padded}.png`;
         const done = () => {
           if (cancelled) return;
           loadedCount++;
           setImagesLoaded(loadedCount);
+          // Trigger immediate draw of initial frame as soon as frame 0 or 1 loads
+          if (i === 0 || loadedCount === 1) {
+            drawImage(0);
+          }
           resolve(img);
         };
         img.onload = done;
@@ -52,8 +65,36 @@ export default function ScrollyCanvas({ heroRef }: Props) {
 
   const drawImage = (index: number) => {
     const canvas = canvasRef.current;
-    const img = imagesRef.current[index];
-    if (!canvas || !img || !img.complete || img.naturalWidth === 0) return;
+    if (!canvas) return;
+
+    let img = imagesRef.current[index];
+
+    // Fallback: If target frame isn't loaded yet (due to large 222MB sequence download over GitHub Pages),
+    // find the nearest loaded frame so canvas is NEVER blank or black!
+    if (!img || !img.complete || img.naturalWidth === 0) {
+      let found: HTMLImageElement | null = null;
+      for (let offset = 1; offset < FRAME_COUNT; offset++) {
+        const prevIndex = index - offset;
+        if (prevIndex >= 0) {
+          const prev = imagesRef.current[prevIndex];
+          if (prev && prev.complete && prev.naturalWidth > 0) {
+            found = prev;
+            break;
+          }
+        }
+        const nextIndex = index + offset;
+        if (nextIndex < FRAME_COUNT) {
+          const next = imagesRef.current[nextIndex];
+          if (next && next.complete && next.naturalWidth > 0) {
+            found = next;
+            break;
+          }
+        }
+      }
+      if (!found) return;
+      img = found;
+    }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -89,7 +130,7 @@ export default function ScrollyCanvas({ heroRef }: Props) {
 
   return (
     <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center">
-      {imagesLoaded < FRAME_COUNT && (
+      {imagesLoaded < 5 && (
         <div className="absolute inset-0 z-50 bg-[#0d0d0d] flex items-center justify-center text-white text-sm font-mono tracking-widest">
           LOADING {Math.floor((imagesLoaded / FRAME_COUNT) * 100)}%
         </div>
