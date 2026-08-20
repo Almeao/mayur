@@ -30,6 +30,7 @@ export default function ScrollyCanvas({ heroRef }: Props) {
       if (typeof window !== 'undefined') {
         const p = window.location.pathname;
         if (p.startsWith('/mayur')) return '/mayur';
+        if (window.location.hostname.includes('github.io')) return '/mayur';
       }
       return process.env.NEXT_PUBLIC_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/mayur' : '');
     };
