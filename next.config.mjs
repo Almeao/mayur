@@ -1,7 +1,9 @@
+const isProd = process.env.NODE_ENV === "production";
+
 const nextConfig = {
   output: "export",
 
-  basePath: "/mayur",
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || (isProd ? "/mayur" : ""),
 
   images: {
     unoptimized: true,

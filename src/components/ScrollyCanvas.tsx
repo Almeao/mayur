@@ -30,7 +30,8 @@ export default function ScrollyCanvas({ heroRef }: Props) {
       return new Promise<HTMLImageElement>((resolve) => {
         const img = new Image();
         const padded = (i + 1).toString().padStart(3, '0');
-        img.src = `/sequence/ezgif-frame-${padded}.png`;
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/mayur' : '');
+        img.src = `${basePath}/sequence/ezgif-frame-${padded}.png`;
         const done = () => {
           if (cancelled) return;
           loadedCount++;
